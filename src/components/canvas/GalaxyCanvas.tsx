@@ -35,6 +35,7 @@ interface PhotoNode {
   hoverScale: number;
   clickFlash: number;
   flyProgress: number;
+  isVideo: boolean;       // video nodes use sphere distribution + special glow
   jxPhase: number; jyPhase: number;
   jxSpeed: number; jySpeed: number;
 }
@@ -210,7 +211,7 @@ function generateBokeh(rng: () => number): DustParticle[] {
   return bokeh;
 }
 
-function generateVolumeDust(rng: () => number): CloudParticle[] {
+function generateVolumeDust(_rng: () => number): CloudParticle[] {
   const particles: CloudParticle[] = [];
   for (let i = 0; i < VOLUME_DUST_COUNT; i++) { /* removed */ }
   return particles;
@@ -222,15 +223,98 @@ function generatePlanets(rng: () => number): Planet[] {
   return planets;
 }
 
+/** Fibonacci sphere — distributes N points uniformly on sphere surface. */
+function fibonacciSphere(index: number, total: number, baseRadius: number, rng: () => number): { x: number; y: number; z: number } {
+  const phi = Math.PI * (3 - Math.sqrt(5));
+  const y = total > 1 ? 1 - (index / (total - 1)) * 2 : 0;
+  const radiusAtY = Math.sqrt(1 - y * y);
+  const theta = phi * index;
+  const x = Math.cos(theta) * radiusAtY;
+  const z = Math.sin(theta) * radiusAtY;
+  const r = baseRadius * (0.92 + rng() * 0.16);
+  return { x: x * r, y: y * r, z: z * r };
+}
+
 function generatePhotoNodes(files: MediaFile[]): PhotoNode[] {
   const nodes: PhotoNode[] = [];
-  for (let i = 0; i < files.length; i++) { const file = files[i], seed = (i * 16807 + 137) % 2147483647, rng2 = createRNG(seed); const r = MIN_PARTICLE_RADIUS + (1 - MIN_PARTICLE_RADIUS) * Math.pow(rng2(), 1.8), armIndex = Math.floor(rng2() * ARM_COUNT), armOffset = (armIndex / ARM_COUNT) * Math.PI * 2, spiralAngle = Math.log(1 + r * 10) * ARM_TWIST, perpendicularNoise = (rng2() + rng2() + rng2()) / 3 - 0.5, armWidth = ARM_WIDTH_FACTOR * (0.5 + 0.5 * (1 - r)), angleNoise = perpendicularNoise * armWidth * 3; const theta = armOffset + spiralAngle + angleNoise, x = Math.cos(theta) * r * DISK_RADIUS, z = Math.sin(theta) * r * DISK_RADIUS, y = (rng2() - 0.5) * DISK_THICKNESS * (0.6 + 0.4 * (1 - r)); const col = galaxyColor(r), isVideo = file.type === 'video', baseSize = 1.5 + (1 - r) * 2.8 + rng2() * 1.0; nodes.push({ id: i, fileIndex: i, x, y, z, radius3D: r, baseSize, r: isVideo ? 220 : Math.min(255, col.r), g: isVideo ? 230 : Math.min(255, col.g), b: isVideo ? 255 : Math.min(255, col.b), phase: rng2() * Math.PI * 2, hoverScale: 1.0, clickFlash: 0, flyProgress: 0, jxPhase: rng2() * Math.PI * 2, jyPhase: rng2() * Math.PI * 2, jxSpeed: 0.4 + rng2() * 1.8, jySpeed: 0.4 + rng2() * 1.8 }); }
+  // Separate video and photo indices
+  const videoIndices: number[] = [];
+  const photoIndices: number[] = [];
+  for (let i = 0; i < files.length; i++) {
+    if (files[i].type === 'video') videoIndices.push(i);
+    else photoIndices.push(i);
+  }
+  const seeds = files.map((_, i) => (i * 16807 + 137) % 2147483647);
+  const rngs = seeds.map(s => createRNG(s));
+  // Video nodes: Fibonacci sphere at 75% arm distance
+  const VIDEO_SPHERE_RADIUS = 5.0;
+  const VIDEO_DISTANCE_MULT = 0.15; // 5*0.15 = 0.75 = 75% arm distance
+  for (let vi = 0; vi < videoIndices.length; vi++) {
+    const i = videoIndices[vi], rng2 = rngs[i];
+    const pos = fibonacciSphere(vi, videoIndices.length, VIDEO_SPHERE_RADIUS, rng2);
+    const x = (pos.x + (rng2() - 0.5) * 0.02) * VIDEO_DISTANCE_MULT;
+    const y = (pos.y + (rng2() - 0.5) * 0.02) * VIDEO_DISTANCE_MULT;
+    const z = (pos.z + (rng2() - 0.5) * 0.02) * VIDEO_DISTANCE_MULT;
+    const r = Math.sqrt(x * x + y * y + z * z);
+    const baseSize = (1.5 + (1 - Math.min(r / (VIDEO_SPHERE_RADIUS * VIDEO_DISTANCE_MULT), 1.0)) * 2.8 + rng2() * 1.0) * 1.5;
+    nodes.push({ id: i, fileIndex: i, x, y, z, radius3D: r, baseSize, r: 140, g: 210, b: 255, phase: rng2() * Math.PI * 2, hoverScale: 1.0, clickFlash: 0, flyProgress: 0, isVideo: true, jxPhase: rng2() * Math.PI * 2, jyPhase: rng2() * Math.PI * 2, jxSpeed: 0.4 + rng2() * 1.8, jySpeed: 0.4 + rng2() * 1.8 });
+  }
+  // Photo nodes: spiral arm distribution
+  for (let pi = 0; pi < photoIndices.length; pi++) {
+    const i = photoIndices[pi], rng2 = rngs[i];
+    const r = MIN_PARTICLE_RADIUS + (1 - MIN_PARTICLE_RADIUS) * Math.pow(rng2(), 1.8);
+    const armIndex = Math.floor(rng2() * ARM_COUNT), armOffset = (armIndex / ARM_COUNT) * Math.PI * 2;
+    const spiralAngle = Math.log(1 + r * 10) * ARM_TWIST;
+    const perpendicularNoise = (rng2() + rng2() + rng2()) / 3 - 0.5;
+    const armWidth = ARM_WIDTH_FACTOR * (0.5 + 0.5 * (1 - r)), angleNoise = perpendicularNoise * armWidth * 3;
+    const theta = armOffset + spiralAngle + angleNoise;
+    const x = Math.cos(theta) * r * DISK_RADIUS, z = Math.sin(theta) * r * DISK_RADIUS;
+    const y = (rng2() - 0.5) * DISK_THICKNESS * (0.6 + 0.4 * (1 - r));
+    const col = galaxyColor(r), baseSize = 1.5 + (1 - r) * 2.8 + rng2() * 1.0;
+    nodes.push({ id: i, fileIndex: i, x, y, z, radius3D: r, baseSize, r: Math.min(255, col.r), g: Math.min(255, col.g), b: Math.min(255, col.b), phase: rng2() * Math.PI * 2, hoverScale: 1.0, clickFlash: 0, flyProgress: 0, isVideo: false, jxPhase: rng2() * Math.PI * 2, jyPhase: rng2() * Math.PI * 2, jxSpeed: 0.4 + rng2() * 1.8, jySpeed: 0.4 + rng2() * 1.8 });
+  }
   return nodes;
 }
 
 function generateUploadedPhotoNodes(files: MediaFile[], startIndex: number): PhotoNode[] {
   const nodes: PhotoNode[] = [];
-  for (let i = 0; i < files.length; i++) { const seed = ((startIndex + i) * 16807 + 137) % 2147483647, rng2 = createRNG(seed); const r = MIN_PARTICLE_RADIUS + (1 - MIN_PARTICLE_RADIUS) * Math.pow(rng2(), 1.8), armIndex = Math.floor(rng2() * ARM_COUNT), armOffset = (armIndex / ARM_COUNT) * Math.PI * 2, spiralAngle = Math.log(1 + r * 10) * ARM_TWIST, perpendicularNoise = (rng2() + rng2() + rng2()) / 3 - 0.5, armWidth = ARM_WIDTH_FACTOR * (0.5 + 0.5 * (1 - r)), angleNoise = perpendicularNoise * armWidth * 3; const theta = armOffset + spiralAngle + angleNoise, x = Math.cos(theta) * r * DISK_RADIUS, z = Math.sin(theta) * r * DISK_RADIUS, y = (rng2() - 0.5) * DISK_THICKNESS * (0.6 + 0.4 * (1 - r)); const baseSize = 1.5 + (1 - r) * 2.8 + rng2() * 1.0; const rr = 40 + Math.round(rng2() * 80), gg = 180 + Math.round(rng2() * 75), bb = 210 + Math.round(rng2() * 45); nodes.push({ id: startIndex + i, fileIndex: startIndex + i, x, y, z, radius3D: r, baseSize, r: rr, g: gg, b: bb, phase: rng2() * Math.PI * 2, hoverScale: 1.0, clickFlash: 0, flyProgress: 0, jxPhase: rng2() * Math.PI * 2, jyPhase: rng2() * Math.PI * 2, jxSpeed: 0.4 + rng2() * 1.8, jySpeed: 0.4 + rng2() * 1.8 }); }
+  // Separate video and photo indices
+  const videoIndices: number[] = [];
+  const photoIndices: number[] = [];
+  for (let i = 0; i < files.length; i++) {
+    if (files[i].type === 'video') videoIndices.push(i);
+    else photoIndices.push(i);
+  }
+  const seeds = files.map((_, i) => ((startIndex + i) * 16807 + 137) % 2147483647);
+  const rngs = seeds.map(s => createRNG(s));
+  // Video nodes: Fibonacci sphere
+  const VIDEO_SPHERE_RADIUS = 5.0;
+  const VIDEO_DISTANCE_MULT = 0.15;
+  for (let vi = 0; vi < videoIndices.length; vi++) {
+    const i = videoIndices[vi], globalIdx = startIndex + i, rng2 = rngs[i];
+    const pos = fibonacciSphere(vi, videoIndices.length, VIDEO_SPHERE_RADIUS, rng2);
+    const x = (pos.x + (rng2() - 0.5) * 0.02) * VIDEO_DISTANCE_MULT;
+    const y = (pos.y + (rng2() - 0.5) * 0.02) * VIDEO_DISTANCE_MULT;
+    const z = (pos.z + (rng2() - 0.5) * 0.02) * VIDEO_DISTANCE_MULT;
+    const r = Math.sqrt(x * x + y * y + z * z);
+    const baseSize = (1.5 + (1 - Math.min(r / (VIDEO_SPHERE_RADIUS * VIDEO_DISTANCE_MULT), 1.0)) * 2.8 + rng2() * 1.0) * 1.5;
+    nodes.push({ id: globalIdx, fileIndex: globalIdx, x, y, z, radius3D: r, baseSize, r: 140, g: 210, b: 255, phase: rng2() * Math.PI * 2, hoverScale: 1.0, clickFlash: 0, flyProgress: 0, isVideo: true, jxPhase: rng2() * Math.PI * 2, jyPhase: rng2() * Math.PI * 2, jxSpeed: 0.4 + rng2() * 1.8, jySpeed: 0.4 + rng2() * 1.8 });
+  }
+  // Photo nodes: spiral arm distribution
+  for (let pi = 0; pi < photoIndices.length; pi++) {
+    const i = photoIndices[pi], globalIdx = startIndex + i, rng2 = rngs[i];
+    const r = MIN_PARTICLE_RADIUS + (1 - MIN_PARTICLE_RADIUS) * Math.pow(rng2(), 1.8);
+    const armIndex = Math.floor(rng2() * ARM_COUNT), armOffset = (armIndex / ARM_COUNT) * Math.PI * 2;
+    const spiralAngle = Math.log(1 + r * 10) * ARM_TWIST;
+    const perpendicularNoise = (rng2() + rng2() + rng2()) / 3 - 0.5;
+    const armWidth = ARM_WIDTH_FACTOR * (0.5 + 0.5 * (1 - r)), angleNoise = perpendicularNoise * armWidth * 3;
+    const theta = armOffset + spiralAngle + angleNoise;
+    const x = Math.cos(theta) * r * DISK_RADIUS, z = Math.sin(theta) * r * DISK_RADIUS;
+    const y = (rng2() - 0.5) * DISK_THICKNESS * (0.6 + 0.4 * (1 - r));
+    const baseSize = 1.5 + (1 - r) * 2.8 + rng2() * 1.0;
+    const rr = 40 + Math.round(rng2() * 80), gg = 180 + Math.round(rng2() * 75), bb = 210 + Math.round(rng2() * 45);
+    nodes.push({ id: globalIdx, fileIndex: globalIdx, x, y, z, radius3D: r, baseSize, r: rr, g: gg, b: bb, phase: rng2() * Math.PI * 2, hoverScale: 1.0, clickFlash: 0, flyProgress: 0, isVideo: false, jxPhase: rng2() * Math.PI * 2, jyPhase: rng2() * Math.PI * 2, jxSpeed: 0.4 + rng2() * 1.8, jySpeed: 0.4 + rng2() * 1.8 });
+  }
   return nodes;
 }
 

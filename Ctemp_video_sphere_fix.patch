@@ -1,0 +1,44 @@
+diff --git a/src/components/canvas/GalaxyCanvas.tsx b/src/components/canvas/GalaxyCanvas.tsx
+index 1cce0d9..9a324d5 100644
+--- a/src/components/canvas/GalaxyCanvas.tsx
++++ b/src/components/canvas/GalaxyCanvas.tsx
+@@ -799,8 +799,8 @@ function generatePhotoNodes(
+   const nodes: PhotoNode[] = [];
+ 
+   // --- Video nodes: Fibonacci sphere near center ---
+-  const VIDEO_SPHERE_RADIUS = 2.0; // base sphere radius (scaled 5x below)
+-  const VIDEO_DISTANCE_MULT = 5.0; // push video sphere further from center
++  const VIDEO_SPHERE_RADIUS = 5.0; // sphere radius (video spread)
++  const VIDEO_DISTANCE_MULT = 0.15; // 5*0.15 = 0.75 = 75% arm distance
+   for (let vi = 0; vi < videoIndices.length; vi++) {
+     const i = videoIndices[vi];
+     const rng2 = rngs[i];
+@@ -812,7 +812,7 @@ function generatePhotoNodes(
+     const r = Math.sqrt(x * x + y * y + z * z);
+ 
+     // Video nodes: 1.5x larger baseSize, ice-blue color
+-    const baseSize = (1.5 + (1 - Math.min(r / VIDEO_DISTANCE_MULT, 0.25)) * 2.8 + rng2() * 1.0) * 1.5;
++    const baseSize = (1.5 + (1 - Math.min(r / (VIDEO_SPHERE_RADIUS * VIDEO_DISTANCE_MULT), 1.0)) * 2.8 + rng2() * 1.0) * 1.5;
+ 
+     nodes.push({
+       id: i,
+@@ -901,8 +901,8 @@ function generateUploadedPhotoNodes(
+   const nodes: PhotoNode[] = [];
+ 
+   // --- Video nodes: Fibonacci sphere near center ---
+-  const VIDEO_SPHERE_RADIUS = 2.0; // base sphere radius (scaled 5x below)
+-  const VIDEO_DISTANCE_MULT = 5.0;
++  const VIDEO_SPHERE_RADIUS = 5.0; // sphere radius (video spread)
++  const VIDEO_DISTANCE_MULT = 0.15; // 5*0.15 = 0.75 = 75% arm distance
+   for (let vi = 0; vi < videoIndices.length; vi++) {
+     const i = videoIndices[vi];
+     const globalIdx = startIndex + i;
+@@ -913,7 +913,7 @@ function generateUploadedPhotoNodes(
+     const z = (pos.z + (rng2() - 0.5) * 0.02) * VIDEO_DISTANCE_MULT;
+     const r = Math.sqrt(x * x + y * y + z * z);
+ 
+-    const baseSize = (1.5 + (1 - Math.min(r / VIDEO_DISTANCE_MULT, 0.25)) * 2.8 + rng2() * 1.0) * 1.5;
++    const baseSize = (1.5 + (1 - Math.min(r / (VIDEO_SPHERE_RADIUS * VIDEO_DISTANCE_MULT), 1.0)) * 2.8 + rng2() * 1.0) * 1.5;
+ 
+     nodes.push({
+       id: globalIdx,
