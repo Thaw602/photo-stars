@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>视频星座连线 - 效果预览</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #04050a; font-family: 'Noto Sans SC', sans-serif; overflow: hidden; }
+  canvas { display: block; }
+  .legend {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 40px; z-index: 10;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; color: #e2d5c0; font-size: 13px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .legend-dot.photo { background: #ffd27a; box-shadow: 0 0 10px #ffd27a; }
+  .legend-dot.video { background: #8cd4ff; box-shadow: 0 0 18px #5bb8ff; }
+  .legend-line { width: 30px; height: 1px; background: rgba(140,210,255,0.4); }
+  .title {
+    position: fixed; top: 50px; left: 50%; transform: translateX(-50%);
+    color: #ffd27a; font-size: 18px; letter-spacing: 0.1em; z-index: 10;
+  }
+  .subtitle {
+    position: fixed; top: 78px; left: 50%; transform: translateX(-50%);
+    color: #8b93a7; font-size: 12px; z-index: 10;
+  }
+</style>
+</head>
+<body>
+<div class="title">视频星座连线 · 效果预览</div>
+<div class="subtitle">蓝色大粒子 = 视频 ｜ 金色小粒子 = 照片 ｜ 淡蓝线 = 视频星座网</div>
+<canvas id="c"></canvas>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot video"></div> 视频粒子（更大更亮）</div>
+  <div class="legend-item"><div class="legend-dot photo"></div> 照片粒子</div>
+  <div class="legend-item"><div class="legend-line"></div> 星座连线</div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let w, h, cx, cy;
+
+function resize() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+  cx = w / 2; cy = h / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Simulated spiral galaxy background particles
+const bgParticles = [];
+for (let i = 0; i < 5000; i++) {
+  const r = 0.05 + Math.pow(Math.random(), 1.5) * 0.9;
+  const arm = Math.floor(Math.random() * 5);
+  const armOff = (arm / 5) * Math.PI * 2;
+  const spiral = Math.log(1 + r * 10) * 3.8;
+  const noise = (Math.random() - 0.5) * 0.15;
+  const theta = armOff + spiral + noise;
+  const x = Math.cos(theta) * r;
+  const z = Math.sin(theta) * r;
+  const y = (Math.random() - 0.5) * 0.1;
+  const colRatio = r;
+  let cr, cg, cb;
+  if (colRatio < 0.15) { cr = 255 - colRatio/0.15*215; cg = 255 - colRatio/0.15*35; cb = 255 - colRatio/0.15*55; }
+  else if (colRatio < 0.45) { const f = (colRatio-0.15)/0.3; cr = 40+f*215; cg = 220-f*155; cb = 200-f*110; }
+  else { const f = (colRatio-0.45)/0.55; cr = 255-f*175; cg = 15+f*5; cb = 200-f*95; }
+  bgParticles.push({ x, y, z, r, cr, cg, cb, alpha: 0.02 + Math.random() * 0.06, size: 0.3 + Math.random() * 2 });
+}
+
+// Photo nodes (golden, small)
+const photoNodes = [];
+for (let i = 0; i < 50; i++) {
+  const r = 0.08 + Math.random() * 0.85;
+  const arm = Math.floor(Math.random() * 5);
+  const armOff = (arm / 5) * Math.PI * 2;
+  const spiral = Math.log(1 + r * 10) * 3.8;
+  const noise = (Math.random() - 0.5) * 0.2;
+  const theta = armOff + spiral + noise;
+  photoNodes.push({ x: Math.cos(theta)*r, y: (Math.random()-0.5)*0.08, z: Math.sin(theta)*r, r });
+}
+
+// Video nodes (ice blue, bigger, fewer)
+const videoNodes = [];
+for (let i = 0; i < 8; i++) {
+  const r = 0.12 + Math.random() * 0.7;
+  const arm = Math.floor(Math.random() * 5);
+  const armOff = (arm / 5) * Math.PI * 2;
+  const spiral = Math.log(1 + r * 10) * 3.8;
+  const noise = (Math.random() - 0.5) * 0.25;
+  const theta = armOff + spiral + noise;
+  videoNodes.push({ x: Math.cos(theta)*r, y: (Math.random()-0.5)*0.08, z: Math.sin(theta)*r, r });
+}
+
+const scale = Math.min(w, h) * 0.55;
+const cosX = Math.cos(0.15), sinX = Math.sin(0.15);
+const cosY = Math.cos(0.8), sinY = Math.sin(0.8);
+const zoom = 1.0;
+let time = 0;
+
+function project(x, y, z) {
+  const rx1 = x*cosY+z*sinY, rz1 = -x*sinY+z*cosY;
+  const ry1 = y*cosX-rz1*sinX, rz2 = y*sinX+rz1*cosX;
+  const viewZ = rz2+2.2/zoom;
+  if (viewZ < 0.15) return null;
+  return { px: cx+rx1*scale/viewZ, py: cy-ry1*scale/viewZ, d: rz2 };
+}
+
+function draw() {
+  time += 0.016;
+  ctx.fillStyle = '#03050a'; ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = 'lighter';
+
+  // BG particles
+  for (const p of bgParticles) {
+    const r = project(p.x, p.y, p.z);
+    if (!r || r.px<0||r.px>w||r.py<0||r.py>h) continue;
+    const breathe = 1 + Math.sin(time*2+p.r*10)*0.08;
+    ctx.globalAlpha = p.alpha * breathe;
+    const s = p.size / Math.max(r.d+2.2, 0.3) * 0.3;
+    ctx.fillStyle = `rgb(${p.cr},${p.cg},${p.cb})`;
+    ctx.beginPath(); ctx.arc(r.px, r.py, s, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Photo nodes (warm golden, small glow)
+  const photoScreen = [];
+  for (const n of photoNodes) {
+    const r = project(n.x, n.y, n.z);
+    if (!r || r.px<0||r.px>w||r.py<0||r.py>h) continue;
+    photoScreen.push({ ...r, node: n });
+  }
+  photoScreen.sort((a,b) => a.d - b.d);
+  for (const s of photoScreen) {
+    const sz = 3 / Math.max(s.d+2.2, 0.3);
+    // glow
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#ffd27a';
+    ctx.beginPath(); ctx.arc(s.px, s.py, sz*5, 0, Math.PI*2); ctx.fill();
+    // core
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#ffd27a';
+    ctx.beginPath(); ctx.arc(s.px, s.py, sz*0.8, 0, Math.PI*2); ctx.fill();
+    // white center
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(s.px, s.py, sz*0.25, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Video nodes (ice blue, 2x bigger, strong glow)
+  const videoScreen = [];
+  for (const n of videoNodes) {
+    const r = project(n.x, n.y, n.z);
+    if (!r || r.px<0||r.px>w||r.py<0||r.py>h) continue;
+    videoScreen.push({ ...r, node: n });
+  }
+
+  // === VIDEO CONSTELLATION LINES (drawn under video nodes) ===
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  for (let i = 0; i < videoScreen.length; i++) {
+    for (let j = i+1; j < videoScreen.length; j++) {
+      const a = videoScreen[i], b = videoScreen[j];
+      const dx = a.px - b.px, dy = a.py - b.py;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      if (dist < w * 0.65) { // only connect reasonably close pairs
+        const alpha = 0.15 * (1 - dist/(w*0.65));
+        const pulse = 0.7 + 0.3 * Math.sin(time * 1.5 + i + j);
+        ctx.globalAlpha = alpha * pulse;
+        ctx.strokeStyle = 'rgba(120,200,255,0.5)';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath(); ctx.moveTo(a.px, a.py); ctx.lineTo(b.px, b.py); ctx.stroke();
+        // faint outer glow on line
+        ctx.globalAlpha = alpha * 0.3 * pulse;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(100,180,240,0.15)';
+        ctx.beginPath(); ctx.moveTo(a.px, a.py); ctx.lineTo(b.px, b.py); ctx.stroke();
+      }
+    }
+  }
+
+  // Video nodes (ice blue, LARGE, bright)
+  videoScreen.sort((a,b) => a.d - b.d);
+  ctx.globalCompositeOperation = 'lighter';
+  for (const s of videoScreen) {
+    const sz = 2.5 * (3 / Math.max(s.d+2.2, 0.3)); // 2.5x bigger than photos
+    // Outer ice-blue halo
+    ctx.globalAlpha = 0.3;
+    const glow = ctx.createRadialGradient(s.px, s.py, 0, s.px, s.py, sz*8);
+    glow.addColorStop(0, 'rgba(140,210,255,0.4)');
+    glow.addColorStop(0.5, 'rgba(80,170,240,0.1)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(s.px, s.py, sz*8, 0, Math.PI*2); ctx.fill();
+    // Mid glow
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#8cd4ff';
+    ctx.beginPath(); ctx.arc(s.px, s.py, sz*3, 0, Math.PI*2); ctx.fill();
+    // Core
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#d0eeff';
+    ctx.beginPath(); ctx.arc(s.px, s.py, sz, 0, Math.PI*2); ctx.fill();
+    // White center
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(s.px, s.py, sz*0.3, 0, Math.PI*2); ctx.fill();
+    // Diamond marker
+    const cx2 = s.px, cy2 = s.py;
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(cx2, cy2 - sz*2.5);
+    ctx.lineTo(cx2 + sz*1.5, cy2);
+    ctx.lineTo(cx2, cy2 + sz*2.5);
+    ctx.lineTo(cx2 - sz*1.5, cy2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
