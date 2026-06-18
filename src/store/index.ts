@@ -41,11 +41,17 @@ interface AppState {
   // Loading
   loading: boolean;
   setLoading: (v: boolean) => void;
+
+  // Search
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  highlightedIndex: number | null;
+  clearHighlight: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
   manifest: null,
-  setManifest: (m) => set({ manifest: m }),
+  setManifest: (m) => set({ manifest: m, highlightedIndex: null, searchQuery: '' }),
 
   selectedFile: null,
   selectFile: (f) => set({ selectedFile: f, showViewer: f !== null }),
@@ -61,4 +67,17 @@ export const useAppStore = create<AppState>((set) => ({
 
   loading: true,
   setLoading: (v) => set({ loading: v }),
+
+  searchQuery: '',
+  setSearchQuery: (q) => {
+    const num = parseInt(q.trim(), 10);
+    const manifest = useAppStore.getState().manifest;
+    if (!manifest || !Number.isInteger(num) || num < 1 || num > manifest.files.length) {
+      set({ searchQuery: q, highlightedIndex: null });
+    } else {
+      set({ searchQuery: q, highlightedIndex: num - 1 });
+    }
+  },
+  highlightedIndex: null,
+  clearHighlight: () => set({ searchQuery: '', highlightedIndex: null }),
 }));

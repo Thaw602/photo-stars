@@ -4,6 +4,9 @@ export default function HUD() {
   const manifest = useAppStore((s) => s.manifest);
   const selectedFile = useAppStore((s) => s.selectedFile);
   const selectFile = useAppStore((s) => s.selectFile);
+  const searchQuery = useAppStore((s) => s.searchQuery);
+  const setSearchQuery = useAppStore((s) => s.setSearchQuery);
+  const clearHighlight = useAppStore((s) => s.clearHighlight);
 
   if (!manifest) return null;
 
@@ -17,7 +20,29 @@ export default function HUD() {
       </div>
 
       <div className="hud-center">
-        {selectedFile ? (
+        <div className="hud-search">
+          <span className="hud-search-icon">#</span>
+          <input
+            className="hud-search-input"
+            type="text"
+            inputMode="numeric"
+            placeholder="搜索编号..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                clearHighlight();
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+          />
+          {searchQuery && (
+            <button className="hud-search-clear" onClick={() => clearHighlight()}>
+              ✕
+            </button>
+          )}
+        </div>
+        {selectedFile && (
           <div className="hud-selected">
             <span className="hud-selected-date">{selectedFile.date}</span>
             <span className="hud-selected-name">
@@ -27,8 +52,6 @@ export default function HUD() {
               ✕
             </button>
           </div>
-        ) : (
-          <div className="hud-hint">点击星空中的光点查看照片</div>
         )}
       </div>
 
