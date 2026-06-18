@@ -36,7 +36,7 @@ export default function PhotoViewer() {
         <div className="viewer-media">
           {isVideo ? (
             <video
-              src={`/${selectedFile.path}`}
+              src={import.meta.env.BASE_URL + selectedFile.path}
               controls
               autoPlay
               className="viewer-video"
@@ -44,7 +44,7 @@ export default function PhotoViewer() {
             />
           ) : (
             <img
-              src={`/${selectedFile.path}`}
+              src={import.meta.env.BASE_URL + selectedFile.path}
               alt={selectedFile.name}
               className="viewer-image"
               loading="eager"
