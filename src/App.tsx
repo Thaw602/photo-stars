@@ -14,8 +14,8 @@ export default function App() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/photos-manifest.json').then((r) => r.json()),
-      fetch('/captions.json').then((r) => r.json()).catch(() => ({})),
+      fetch(import.meta.env.BASE_URL + 'photos-manifest.json').then((r) => r.json()),
+      fetch(import.meta.env.BASE_URL + 'captions.json').then((r) => r.json()).catch(() => ({})),
     ])
       .then(([m, c]) => {
         setManifest(m as Manifest);
