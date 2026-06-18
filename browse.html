@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>照片浏览 - 写小记</title>
+<style>
+  body { background: #111; color: #eee; font-family: 'Noto Sans SC', sans-serif; padding: 20px; }
+  h1 { color: #ffd27a; font-size: 20px; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .card { background: #1a1a2e; border-radius: 8px; overflow: hidden; }
+  .card img { width: 100%; height: 150px; object-fit: cover; display: block; }
+  .card video { width: 100%; height: 150px; object-fit: cover; display: block; }
+  .card .info { padding: 8px 10px; font-size: 12px; }
+  .card .name { color: #aaa; word-break: break-all; margin-bottom: 4px; }
+  .card .date { color: #ffd27a; }
+</style>
+</head>
+<body>
+<h1>全部照片 (共 75 张)</h1>
+<div class="grid" id="grid"></div>
+<script>
+fetch('/photos-manifest.json')
+  .then(r => r.json())
+  .then(m => {
+    const grid = document.getElementById('grid');
+    m.files.forEach((f, i) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      const media = f.type === 'video'
+        ? `<video src="${f.path}" muted></video>`
+        : `<img src="${f.path}" loading="lazy" />`;
+      card.innerHTML = media
+        + `<div class="info"><div class="name">#${i} ${f.name.slice(0,40)}</div><div class="date">${f.date}</div></div>`;
+      grid.appendChild(card);
+    });
+  });
+</script>
+</body>
+</html>

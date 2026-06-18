@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="过去—现在 · 我的照片星空" />
+    <meta property="og:title" content="过去—现在 · 照片星空" />
+    <meta property="og:description" content="把回忆洒向星空" />
+    <meta name="theme-color" content="#04050a" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <title>过去—现在 · 照片星空</title>
+    <style>
+      body { margin: 0; background: #04050a; overflow: hidden; }
+      #loading-splash {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: #04050a; transition: opacity 0.5s ease;
+        font-family: 'Noto Sans SC', sans-serif;
+      }
+      #loading-splash.hidden { opacity: 0; pointer-events: none; }
+      #loading-splash .title { font-size: 28px; color: #ffd27a; letter-spacing: 0.15em; }
+      #loading-splash .sub { margin-top: 8px; color: #8b93a7; font-size: 13px; }
+    </style>
+    <script type="module" crossorigin src="/photo-stars/assets/index-DyUwLfW7.js"></script>
+    <link rel="modulepreload" crossorigin href="/photo-stars/assets/rolldown-runtime-Bh1tDfsg.js">
+    <link rel="modulepreload" crossorigin href="/photo-stars/assets/zustand-OzDhP1Tm.js">
+    <link rel="stylesheet" crossorigin href="/photo-stars/assets/index-DWLLvMv9.css">
+  </head>
+  <body>
+    <div id="loading-splash">
+      <div class="title">过 去 · 现 在</div>
+      <div class="sub">Past &amp; Present</div>
+    </div>
+    <div id="root"></div>
+  </body>
+</html>
