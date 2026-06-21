@@ -256,19 +256,29 @@ function placeOnSpiralArm(rng: () => number, scale: number): { x: number; y: num
 
 function generateVideoFillParticles(rng: () => number): VideoFillParticle[] {
   const particles: VideoFillParticle[] = [];
-  for (let i = 0; i < VIDEO_FILL_COUNT; i++) {
-    const pos = placeOnSpiralArm(rng, VIDEO_GALAXY_SCALE);
-    // Bias toward outer arms where density matters more
-    const armBias = pos.r;
-    particles.push({
-      x: pos.x + VIDEO_GALAXY_X_OFFSET,
-      y: pos.y,
-      z: pos.z + VIDEO_GALAXY_Z_OFFSET,
-      size: 0.2 + rng() * 0.6,
-      alpha: (0.12 + rng() * 0.40) * (0.6 + armBias * 0.4),
-      phase: rng() * Math.PI * 2,
-      speed: 1.5 + rng() * 2.5,
-    });
+  const MIN_R = 0.22; // hole near core — no particles inside this radius
+  const perArm = Math.floor(VIDEO_FILL_COUNT / ARM_COUNT);
+  for (let arm = 0; arm < ARM_COUNT; arm++) {
+    const armOffset = (arm / ARM_COUNT) * Math.PI * 2;
+    for (let i = 0; i < perArm; i++) {
+      // radius: MIN_R ~ 1.0, bias toward outer with power curve
+      const r = MIN_R + (1 - MIN_R) * Math.pow(rng(), 1.6);
+      const spiralAngle = Math.log(1 + r * 10) * ARM_TWIST;
+      const perpendicularNoise = (rng() + rng() + rng()) / 3 - 0.5;
+      const armWidth = ARM_WIDTH_FACTOR * (0.5 + 0.5 * (1 - r));
+      const angleNoise = perpendicularNoise * armWidth * 3;
+      const theta = armOffset + spiralAngle + angleNoise;
+      const x = Math.cos(theta) * r * DISK_RADIUS * VIDEO_GALAXY_SCALE + VIDEO_GALAXY_X_OFFSET;
+      const z = Math.sin(theta) * r * DISK_RADIUS * VIDEO_GALAXY_SCALE + VIDEO_GALAXY_Z_OFFSET;
+      const y = (rng() - 0.5) * DISK_THICKNESS * (0.6 + 0.4 * (1 - r)) * VIDEO_GALAXY_SCALE;
+      particles.push({
+        x, y, z,
+        size: 0.2 + rng() * 0.6,
+        alpha: (0.12 + rng() * 0.40) * (0.5 + r * 0.5),
+        phase: rng() * Math.PI * 2,
+        speed: 1.5 + rng() * 2.5,
+      });
+    }
   }
   return particles;
 }
