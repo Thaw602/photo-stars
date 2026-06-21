@@ -23,7 +23,7 @@ const ORBIT_SPEED = 1.0;
 const EXPAND_DURATION = 1.5;
 const FLASH_DURATION = 0.2;
 const BLUE_DELAY = 0.8;
-const FOCUS_DURATION = 0.8;
+const FOCUS_DURATION = 1.2;
 
 export function useGalaxyAnimation() {
   const setPhase = useAppStore(s => s.setPhase);
@@ -107,9 +107,9 @@ export function useGalaxyAnimation() {
     }
     const focusElapsed = (timestamp - focusStartTime.current) / 1000;
     const focusT = Math.min(1, focusElapsed / FOCUS_DURATION);
-    const easedFocusT = focusT < 1
-      ? 1 - Math.pow(1 - focusT, 3)
-      : 1;
+    const easedFocusT = focusT < 0.5
+      ? 4 * focusT * focusT * focusT
+      : 1 - Math.pow(-2 * focusT + 2, 3) / 2;
     focusCurrent.current = {
       x: pc.x + (ft.x - pc.x) * easedFocusT,
       y: pc.y + (ft.y - pc.y) * easedFocusT,
