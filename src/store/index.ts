@@ -36,6 +36,10 @@ interface AppState {
   showViewer: boolean;
   setShowViewer: (v: boolean) => void;
 
+  // Animation
+  phase: 'orbs' | 'expand_gold' | 'expand_blue' | 'dual';
+  setPhase: (p: 'orbs' | 'expand_gold' | 'expand_blue' | 'dual') => void;
+
   // Quality
   quality: 'high' | 'medium' | 'low';
   setQuality: (q: 'high' | 'medium' | 'low') => void;
@@ -99,6 +103,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   showViewer: false,
   setShowViewer: (v) => set({ showViewer: v }),
+
+  phase: 'orbs',
+  setPhase: (p) => set({ phase: p }),
 
   captions: {},
   setCaptions: (c) => set({ captions: c }),
