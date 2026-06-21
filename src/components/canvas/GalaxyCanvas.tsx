@@ -491,7 +491,7 @@ export default function GalaxyCanvas() {
 
     if (!isPointerDown.current) { const av = angularVelocity.current; const speed = Math.sqrt(av.x * av.x + av.y * av.y); if (speed > 0.00005) { rotationX.current = Math.max(-1.3, Math.min(1.3, rotationX.current + av.x)); rotationY.current += av.y; av.x *= INERTIA_DECAY; av.y *= INERTIA_DECAY; } else { angularVelocity.current = { x: 0, y: 0 }; rotationY.current += 0.0003; } }
     galaxyRotation.current += ARM_ROTATION_SPEED;
-    videoGalaxyRotation.current += ARM_ROTATION_SPEED * 2.2;
+    videoGalaxyRotation.current += ARM_ROTATION_SPEED * 1.1;
     for (let i = 0; i < planetsRef.current.length; i++) { const planet = planetsRef.current[i]; planet.orbitPhase += planet.orbitSpeed; const cosPhi = Math.cos(planet.orbitPhase), sinPhi = Math.sin(planet.orbitPhase); const baseX = cosPhi * planet.orbitRadius * DISK_RADIUS, baseZ = sinPhi * planet.orbitRadius * DISK_RADIUS; const cosInc = Math.cos(planet.orbitInclination), sinInc = Math.sin(planet.orbitInclination); const pertX = Math.sin(elapsed * 0.7 + i * 1.3) * 0.025, pertY = Math.cos(elapsed * 0.9 + i * 2.1) * 0.025, pertZ = Math.sin(elapsed * 0.5 + i * 0.7) * 0.025; planet.x = baseX + pertX; planet.y = baseZ * sinInc + pertY; planet.z = baseZ * cosInc + pertZ; planet.trail[planet.trailHead] = { x: planet.x, y: planet.y, z: planet.z }; planet.trailHead = (planet.trailHead + 1) % PLANET_TRAIL_LENGTH; }
 
     // Meteor logic
