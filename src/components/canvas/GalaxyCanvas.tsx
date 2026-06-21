@@ -82,10 +82,10 @@ const MIN_PARTICLE_RADIUS = 0.07;
 const ARM_ROTATION_SPEED = 0.0070;
 const JITTER_AMPLITUDE = 1.5;
 const CORE_SCALE = 30.0;
-// Video galaxy — sister galaxy, ~50% area
+// Video galaxy — sister galaxy, ~50% area, placed to the right
 const VIDEO_GALAXY_SCALE = 0.70;
+const VIDEO_GALAXY_X_OFFSET = 0.55;
 const VIDEO_GALAXY_Z_OFFSET = -0.25;
-const VIDEO_GALAXY_Y_OFFSET = -0.45;
 const VIDEO_CORE_SCALE = 0.60;
 const VIDEO_CONNECT_DIST_FACTOR = 0.70;
 const VIDEO_FILL_COUNT = 4000;
@@ -259,8 +259,8 @@ function generateVideoFillParticles(rng: () => number): VideoFillParticle[] {
   for (let i = 0; i < VIDEO_FILL_COUNT; i++) {
     const pos = placeOnSpiralArm(rng, VIDEO_GALAXY_SCALE);
     particles.push({
-      x: pos.x,
-      y: pos.y + VIDEO_GALAXY_Y_OFFSET,
+      x: pos.x + VIDEO_GALAXY_X_OFFSET,
+      y: pos.y,
       z: pos.z + VIDEO_GALAXY_Z_OFFSET,
       size: 0.5 + rng() * 1.0,
       alpha: 0.15 + rng() * 0.35,
@@ -284,8 +284,8 @@ function generatePhotoNodes(files: MediaFile[]): PhotoNode[] {
   for (let vi = 0; vi < videoIndices.length; vi++) {
     const i = videoIndices[vi], rng2 = rngs[i];
     const pos = placeOnSpiralArm(rng2, VIDEO_GALAXY_SCALE);
-    const x = pos.x;
-    const y = pos.y + VIDEO_GALAXY_Y_OFFSET;
+    const x = pos.x + VIDEO_GALAXY_X_OFFSET;
+    const y = pos.y;
     const z = pos.z + VIDEO_GALAXY_Z_OFFSET;
     const baseSize = (1.5 + (1 - pos.r) * 2.8 + rng2() * 1.0) * 0.85; // slightly smaller for fill
     nodes.push({ id: i, fileIndex: i, x, y, z, radius3D: pos.r * VIDEO_GALAXY_SCALE, baseSize, r: 140, g: 210, b: 255, phase: rng2() * Math.PI * 2, hoverScale: 1.0, clickFlash: 0, flyProgress: 0, isVideo: true, jxPhase: rng2() * Math.PI * 2, jyPhase: rng2() * Math.PI * 2, jxSpeed: 0.4 + rng2() * 1.8, jySpeed: 0.4 + rng2() * 1.8 });
@@ -312,8 +312,8 @@ function generateUploadedPhotoNodes(files: MediaFile[], startIndex: number): Pho
   for (let vi = 0; vi < videoIndices.length; vi++) {
     const i = videoIndices[vi], globalIdx = startIndex + i, rng2 = rngs[i];
     const pos = placeOnSpiralArm(rng2, VIDEO_GALAXY_SCALE);
-    const x = pos.x;
-    const y = pos.y + VIDEO_GALAXY_Y_OFFSET;
+    const x = pos.x + VIDEO_GALAXY_X_OFFSET;
+    const y = pos.y;
     const z = pos.z + VIDEO_GALAXY_Z_OFFSET;
     const baseSize = (1.5 + (1 - pos.r) * 2.8 + rng2() * 1.0) * 0.85;
     nodes.push({ id: globalIdx, fileIndex: globalIdx, x, y, z, radius3D: pos.r * VIDEO_GALAXY_SCALE, baseSize, r: 140, g: 210, b: 255, phase: rng2() * Math.PI * 2, hoverScale: 1.0, clickFlash: 0, flyProgress: 0, isVideo: true, jxPhase: rng2() * Math.PI * 2, jyPhase: rng2() * Math.PI * 2, jxSpeed: 0.4 + rng2() * 1.8, jySpeed: 0.4 + rng2() * 1.8 });
@@ -402,7 +402,7 @@ export default function GalaxyCanvas() {
 
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => { const rect = canvasRef.current?.getBoundingClientRect(); if (!rect) return; const mx = e.clientX - rect.left, my = e.clientY - rect.top; isPointerDown.current = true; isDragging.current = false; pointerDownTime.current = performance.now(); angularVelocity.current = { x: 0, y: 0 }; lastDragPos.current = { x: mx, y: my }; dragStart.current = { x: mx, y: my, rx: rotationX.current, ry: rotationY.current }; }, []);
 
-  const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => { const wasDragging = isDragging.current; isPointerDown.current = false; isDragging.current = false; const rect = canvasRef.current?.getBoundingClientRect(); if (!rect) return; const mx = e.clientX - rect.left, my = e.clientY - rect.top; if (!wasDragging) { const currentPhase = useAppStore.getState().phase; if (currentPhase === 'orbs') { const as = animStateRef.current; let hitOrb = false; if (as?.goldOrb) { const gdx = mx - as.goldOrb.px, gdy = my - as.goldOrb.py; if (Math.sqrt(gdx * gdx + gdy * gdy) < as.goldOrb.r * 1.8) { hitOrb = true; } } if (!hitOrb && as?.blueOrb) { const bdx = mx - as.blueOrb.px, bdy = my - as.blueOrb.py; if (Math.sqrt(bdx * bdx + bdy * bdy) < as.blueOrb.r * 1.8) { hitOrb = true; } } if (hitOrb) { triggerGold(); return; } return; } const hit = hitTest(mx, my); if (hit >= 0) { const node = photoNodesRef.current[hit]; node.clickFlash = 1.0; const file = getFileByIndex(node.fileIndex); if (file) { selectFile(file); if (currentPhase === 'dual') { if (node.isVideo) { setFocus({ x: 0, y: VIDEO_GALAXY_Y_OFFSET, z: VIDEO_GALAXY_Z_OFFSET }); } else { setFocus(null); } } } } else if (hit <= -2) { const fileIndex = -(hit + 2); const foNode = photoNodesRef.current.find(n => n.fileIndex === fileIndex); if (foNode) foNode.clickFlash = 1.0; const file = getFileByIndex(fileIndex); if (file) selectFile(file); } } }, [hitTest, manifest, selectFile, uploadedPhotos, triggerGold, setFocus]);
+  const handleMouseUp = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => { const wasDragging = isDragging.current; isPointerDown.current = false; isDragging.current = false; const rect = canvasRef.current?.getBoundingClientRect(); if (!rect) return; const mx = e.clientX - rect.left, my = e.clientY - rect.top; if (!wasDragging) { const currentPhase = useAppStore.getState().phase; if (currentPhase === 'orbs') { const as = animStateRef.current; let hitOrb = false; if (as?.goldOrb) { const gdx = mx - as.goldOrb.px, gdy = my - as.goldOrb.py; if (Math.sqrt(gdx * gdx + gdy * gdy) < as.goldOrb.r * 1.8) { hitOrb = true; } } if (!hitOrb && as?.blueOrb) { const bdx = mx - as.blueOrb.px, bdy = my - as.blueOrb.py; if (Math.sqrt(bdx * bdx + bdy * bdy) < as.blueOrb.r * 1.8) { hitOrb = true; } } if (hitOrb) { triggerGold(); return; } return; } const hit = hitTest(mx, my); if (hit >= 0) { const node = photoNodesRef.current[hit]; node.clickFlash = 1.0; const file = getFileByIndex(node.fileIndex); if (file) { selectFile(file); if (currentPhase === 'dual') { if (node.isVideo) { setFocus({ x: VIDEO_GALAXY_X_OFFSET, y: 0, z: VIDEO_GALAXY_Z_OFFSET }); } else { setFocus(null); } } } } else if (hit <= -2) { const fileIndex = -(hit + 2); const foNode = photoNodesRef.current.find(n => n.fileIndex === fileIndex); if (foNode) foNode.clickFlash = 1.0; const file = getFileByIndex(fileIndex); if (file) selectFile(file); } } }, [hitTest, manifest, selectFile, uploadedPhotos, triggerGold, setFocus]);
 
   const handleMouseLeave = useCallback(() => { if (hoveredRef.current >= 0) photoNodesRef.current[hoveredRef.current].hoverScale = 1.0; hoveredRef.current = -1; isPointerDown.current = false; isDragging.current = false; }, []);
 
@@ -539,7 +539,7 @@ export default function GalaxyCanvas() {
       ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < videoFillRef.current.length; i++) {
         const p = videoFillRef.current[i];
-        const lp = lerpPos(p.x, p.y, p.z, expandBlue, 0, VIDEO_GALAXY_Y_OFFSET, VIDEO_GALAXY_Z_OFFSET);
+        const lp = lerpPos(p.x, p.y, p.z, expandBlue, VIDEO_GALAXY_X_OFFSET, 0, VIDEO_GALAXY_Z_OFFSET);
         const result = project3D(lp.x - fc.x, lp.y - fc.y, lp.z - fc.z, cx, cy, projScale, cosX, sinX, cosY, sinY, zoom);
         if (!result) continue;
         if (result.px < -20 || result.px > w + 20 || result.py < -20 || result.py > h + 20) continue;
@@ -560,8 +560,8 @@ export default function GalaxyCanvas() {
     for (let i = 0; i < photoNodesRef.current.length; i++) {
       const n = photoNodesRef.current[i];
       const et = n.isVideo ? expandBlue : expandGold;
-      const originX = n.isVideo ? 0 : 0;
-      const originY = n.isVideo ? VIDEO_GALAXY_Y_OFFSET : 0;
+      const originX = n.isVideo ? VIDEO_GALAXY_X_OFFSET : 0;
+      const originY = 0;
       const originZ = n.isVideo ? VIDEO_GALAXY_Z_OFFSET : 0;
       const lp = et < 1 ? lerpPos(n.x, n.y, n.z, et, originX, originY, originZ) : { x: n.x, y: n.y, z: n.z };
       const result = project3D(lp.x - fc.x, lp.y - fc.y, lp.z - fc.z, cx, cy, projScale, cosX, sinX, cosY, sinY, zoom);
@@ -584,7 +584,7 @@ export default function GalaxyCanvas() {
       // DUAL focus dimming
       const focusDist = Math.sqrt(fc.x * fc.x + fc.y * fc.y + fc.z * fc.z);
       if (phase === 'dual' && focusDist > 0.01) {
-        const focusingVideo = Math.abs(fc.y - VIDEO_GALAXY_Y_OFFSET) < 0.1;
+        const focusingVideo = Math.abs(fc.x - VIDEO_GALAXY_X_OFFSET) < 0.1;
         if (focusingVideo && !n.isVideo) alpha *= 0.65;
         if (!focusingVideo && n.isVideo) alpha *= 0.65;
       }
@@ -637,7 +637,7 @@ export default function GalaxyCanvas() {
 
     // Video galaxy core glow
     if (phase === 'dual' || expandBlue > 0.3) {
-      const vgCenter = project3D(-fc.x, VIDEO_GALAXY_Y_OFFSET - fc.y, VIDEO_GALAXY_Z_OFFSET - fc.z, cx, cy, projScale, cosX, sinX, cosY, sinY, zoom);
+      const vgCenter = project3D(VIDEO_GALAXY_X_OFFSET - fc.x, -fc.y, VIDEO_GALAXY_Z_OFFSET - fc.z, cx, cy, projScale, cosX, sinX, cosY, sinY, zoom);
       if (vgCenter) {
         ctx.globalCompositeOperation = 'lighter';
         const vgCoreR = Math.min(w, h) * 0.13 * CORE_SCALE * VIDEO_CORE_SCALE;
