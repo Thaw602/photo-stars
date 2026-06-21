@@ -343,7 +343,7 @@ export default function GalaxyCanvas() {
   const { tick, triggerGold, setFocus } = useGalaxyAnimation();
   const animStateRef = useRef<TickOutput | null>(null);
   const flyOutScreen = useRef<{ px: number; py: number; fileIndex: number; size: number } | null>(null);
-  const rotationX = useRef(0.15); const rotationY = useRef(0); const galaxyRotation = useRef(0);
+  const rotationX = useRef(0.15); const rotationY = useRef(0); const galaxyRotation = useRef(0); const videoGalaxyRotation = useRef(0);
   const angularVelocity = useRef({ x: 0, y: 0 }); const lastDragPos = useRef({ x: 0, y: 0 }); const pointerDownTime = useRef(0);
   const panX = useRef(0); const panY = useRef(0); const isRightDrag = useRef(false); const panStart = useRef({ x: 0, y: 0, px: 0, py: 0 });
   const meteorRef = useRef<{ active: boolean; startX: number; startY: number; endX: number; endY: number; progress: number; speed: number; r: number; g: number; b: number }>({ active: false, startX: 0, startY: 0, endX: 0, endY: 0, progress: 0, speed: 0, r: 255, g: 255, b: 255 });
@@ -377,6 +377,11 @@ export default function GalaxyCanvas() {
     else if (photoNodesRef.current.length > totalExpected) photoNodesRef.current = photoNodesRef.current.slice(0, totalExpected);
   }, [manifest, uploadedPhotos]);
 
+  function rotateVideoGalaxy(x: number, y: number, z: number, angle: number): { x: number; y: number; z: number } {
+    const lx = x - VIDEO_GALAXY_X_OFFSET, lz = z - VIDEO_GALAXY_Z_OFFSET;
+    const cosA = Math.cos(angle), sinA = Math.sin(angle);
+    return { x: lx * cosA + lz * sinA + VIDEO_GALAXY_X_OFFSET, y, z: -lx * sinA + lz * cosA + VIDEO_GALAXY_Z_OFFSET };
+  }
   function project3D(x: number, y: number, z: number, cx: number, cy: number, scale: number, cosX: number, sinX: number, cosY: number, sinY: number, zoom: number): { px: number; py: number; depth: number } | null {
     const rx1 = x * cosY + z * sinY, rz1 = -x * sinY + z * cosY, ry1 = y * cosX - rz1 * sinX, rz2 = y * sinX + rz1 * cosX;
     const viewZ = rz2 + 2.2 / zoom; if (viewZ < 0.15) return null;
@@ -392,7 +397,7 @@ export default function GalaxyCanvas() {
     const cosX = Math.cos(rx), sinX = Math.sin(rx), cosY = Math.cos(ry), sinY = Math.sin(ry);
     const fc = animStateRef.current?.focusCurrent ?? { x: 0, y: 0, z: 0 };
     let best = -1, bestDist = Infinity;
-    for (let i = 0; i < nodes.length; i++) { const n = nodes[i]; const result = project3D(n.x - fc.x, n.y - fc.y, n.z - fc.z, cx, cy, s, cosX, sinX, cosY, sinY, zoomRef.current); if (!result) continue; const dx = mx - result.px, dy = my - result.py, dist = Math.sqrt(dx * dx + dy * dy); const projectedSize = n.baseSize / Math.max(result.depth + 2.2 / zoomRef.current, 0.3) * 0.6; const hitR = Math.max(8, projectedSize * 5); if (dist < hitR && dist < bestDist) { bestDist = dist; best = i; } }
+    for (let i = 0; i < nodes.length; i++) { const n = nodes[i]; const rn = n.isVideo ? rotateVideoGalaxy(n.x, n.y, n.z, videoGalaxyRotation.current) : n; const result = project3D(rn.x - fc.x, rn.y - fc.y, rn.z - fc.z, cx, cy, s, cosX, sinX, cosY, sinY, zoomRef.current); if (!result) continue; const dx = mx - result.px, dy = my - result.py, dist = Math.sqrt(dx * dx + dy * dy); const projectedSize = n.baseSize / Math.max(result.depth + 2.2 / zoomRef.current, 0.3) * 0.6; const hitR = Math.max(8, projectedSize * 5); if (dist < hitR && dist < bestDist) { bestDist = dist; best = i; } }
     return best;
   }, []);
 
@@ -486,6 +491,7 @@ export default function GalaxyCanvas() {
 
     if (!isPointerDown.current) { const av = angularVelocity.current; const speed = Math.sqrt(av.x * av.x + av.y * av.y); if (speed > 0.00005) { rotationX.current = Math.max(-1.3, Math.min(1.3, rotationX.current + av.x)); rotationY.current += av.y; av.x *= INERTIA_DECAY; av.y *= INERTIA_DECAY; } else { angularVelocity.current = { x: 0, y: 0 }; rotationY.current += 0.0003; } }
     galaxyRotation.current += ARM_ROTATION_SPEED;
+    videoGalaxyRotation.current += ARM_ROTATION_SPEED * 2.2;
     for (let i = 0; i < planetsRef.current.length; i++) { const planet = planetsRef.current[i]; planet.orbitPhase += planet.orbitSpeed; const cosPhi = Math.cos(planet.orbitPhase), sinPhi = Math.sin(planet.orbitPhase); const baseX = cosPhi * planet.orbitRadius * DISK_RADIUS, baseZ = sinPhi * planet.orbitRadius * DISK_RADIUS; const cosInc = Math.cos(planet.orbitInclination), sinInc = Math.sin(planet.orbitInclination); const pertX = Math.sin(elapsed * 0.7 + i * 1.3) * 0.025, pertY = Math.cos(elapsed * 0.9 + i * 2.1) * 0.025, pertZ = Math.sin(elapsed * 0.5 + i * 0.7) * 0.025; planet.x = baseX + pertX; planet.y = baseZ * sinInc + pertY; planet.z = baseZ * cosInc + pertZ; planet.trail[planet.trailHead] = { x: planet.x, y: planet.y, z: planet.z }; planet.trailHead = (planet.trailHead + 1) % PLANET_TRAIL_LENGTH; }
 
     // Meteor logic
@@ -543,7 +549,8 @@ export default function GalaxyCanvas() {
       for (let i = 0; i < videoFillRef.current.length; i++) {
         const p = videoFillRef.current[i];
         const lp = lerpPos(p.x, p.y, p.z, expandBlue, VIDEO_GALAXY_X_OFFSET, 0, VIDEO_GALAXY_Z_OFFSET);
-        const result = project3D(lp.x - fc.x, lp.y - fc.y, lp.z - fc.z, cx, cy, projScale, cosX, sinX, cosY, sinY, zoom);
+        const rv = rotateVideoGalaxy(lp.x, lp.y, lp.z, videoGalaxyRotation.current);
+        const result = project3D(rv.x - fc.x, rv.y - fc.y, rv.z - fc.z, cx, cy, projScale, cosX, sinX, cosY, sinY, zoom);
         if (!result) continue;
         if (result.px < -20 || result.px > w + 20 || result.py < -20 || result.py > h + 20) continue;
         const twinkle = 0.6 + 0.4 * Math.sin(elapsed * p.speed + p.phase);
@@ -567,7 +574,8 @@ export default function GalaxyCanvas() {
       const originY = 0;
       const originZ = n.isVideo ? VIDEO_GALAXY_Z_OFFSET : 0;
       const lp = et < 1 ? lerpPos(n.x, n.y, n.z, et, originX, originY, originZ) : { x: n.x, y: n.y, z: n.z };
-      const result = project3D(lp.x - fc.x, lp.y - fc.y, lp.z - fc.z, cx, cy, projScale, cosX, sinX, cosY, sinY, zoom);
+      const rv = n.isVideo ? rotateVideoGalaxy(lp.x, lp.y, lp.z, videoGalaxyRotation.current) : lp;
+      const result = project3D(rv.x - fc.x, rv.y - fc.y, rv.z - fc.z, cx, cy, projScale, cosX, sinX, cosY, sinY, zoom);
       if (!result) continue;
       if (result.px < -30 || result.px > w + 30 || result.py < -30 || result.py > h + 30) continue;
       const breathe = 1 + Math.sin(elapsed * 2.0 + n.phase) * 0.10;
