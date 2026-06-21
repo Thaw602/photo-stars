@@ -88,7 +88,7 @@ const VIDEO_GALAXY_X_OFFSET = 1.25;
 const VIDEO_GALAXY_Z_OFFSET = -0.25;
 const VIDEO_CORE_SCALE = 0.60;
 const VIDEO_CONNECT_DIST_FACTOR = 0.70;
-const VIDEO_FILL_COUNT = 500;
+const VIDEO_FILL_COUNT = 5000;
 const INERTIA_DECAY = 0.94;
 const PLANET_COUNT = 7;
 const PLANET_TRAIL_LENGTH = 50;
@@ -258,12 +258,14 @@ function generateVideoFillParticles(rng: () => number): VideoFillParticle[] {
   const particles: VideoFillParticle[] = [];
   for (let i = 0; i < VIDEO_FILL_COUNT; i++) {
     const pos = placeOnSpiralArm(rng, VIDEO_GALAXY_SCALE);
+    // Bias toward outer arms where density matters more
+    const armBias = pos.r;
     particles.push({
       x: pos.x + VIDEO_GALAXY_X_OFFSET,
       y: pos.y,
       z: pos.z + VIDEO_GALAXY_Z_OFFSET,
-      size: 0.5 + rng() * 1.0,
-      alpha: 0.15 + rng() * 0.35,
+      size: 0.2 + rng() * 0.6,
+      alpha: (0.12 + rng() * 0.40) * (0.6 + armBias * 0.4),
       phase: rng() * Math.PI * 2,
       speed: 1.5 + rng() * 2.5,
     });
@@ -548,8 +550,8 @@ export default function GalaxyCanvas() {
         const alpha = p.alpha * twinkle * Math.max(expandBlue, rp);
         if (alpha < 0.01) continue;
         ctx.globalAlpha = alpha;
-        ctx.fillStyle = 'rgba(140,210,255,0.8)';
-        ctx.beginPath(); ctx.arc(result.px, result.py, p.size * 0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(160,225,255,0.9)';
+        ctx.beginPath(); ctx.arc(result.px, result.py, p.size * 0.55, 0, Math.PI * 2); ctx.fill();
       }
       ctx.globalCompositeOperation = 'source-over';
     }
