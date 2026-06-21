@@ -83,12 +83,12 @@ const ARM_ROTATION_SPEED = 0.0070;
 const JITTER_AMPLITUDE = 1.5;
 const CORE_SCALE = 30.0;
 // Video galaxy — sister galaxy, ~50% area, placed to the right
-const VIDEO_GALAXY_SCALE = 0.70;
+const VIDEO_GALAXY_SCALE = 0.50;
 const VIDEO_GALAXY_X_OFFSET = 1.05;
 const VIDEO_GALAXY_Z_OFFSET = -0.25;
 const VIDEO_CORE_SCALE = 0.60;
 const VIDEO_CONNECT_DIST_FACTOR = 0.70;
-const VIDEO_FILL_COUNT = 4000;
+const VIDEO_FILL_COUNT = 2000;
 const INERTIA_DECAY = 0.94;
 const PLANET_COUNT = 7;
 const PLANET_TRAIL_LENGTH = 50;
