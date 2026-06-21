@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAppStore, type MediaFile } from '../../store';
 import { useGalaxyAnimation, type TickOutput } from '../../hooks/useGalaxyAnimation';
 
@@ -652,5 +652,19 @@ export default function GalaxyCanvas() {
   }; animRef.current = requestAnimationFrame(render); return () => cancelAnimationFrame(animRef.current); }, [manifest]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => { e.preventDefault(); }, []);
-  return (<canvas ref={canvasRef} onMouseMove={handleMouseMove} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onMouseLeave={handleMouseLeave} onContextMenu={handleContextMenu} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} style={{ position: 'absolute', inset: 0, zIndex: 0, cursor: 'default' }} />);
+  const focusMain = useCallback(() => { if (useAppStore.getState().phase === 'dual') setFocus(null); }, [setFocus]);
+  const focusVideo = useCallback(() => { if (useAppStore.getState().phase === 'dual') setFocus({ x: VIDEO_GALAXY_X_OFFSET, y: 0, z: VIDEO_GALAXY_Z_OFFSET }); }, [setFocus]);
+  const [showFocusBtns, setShowFocusBtns] = useState(false);
+  useEffect(() => { const unsub = useAppStore.subscribe((s) => { if (s.phase === 'dual' && !showFocusBtns) setShowFocusBtns(true); if (s.phase !== 'dual' && showFocusBtns) setShowFocusBtns(false); }); return unsub; }, [showFocusBtns]);
+  return (
+    <>
+      <canvas ref={canvasRef} onMouseMove={handleMouseMove} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onMouseLeave={handleMouseLeave} onContextMenu={handleContextMenu} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} style={{ position: 'absolute', inset: 0, zIndex: 0, cursor: 'default' }} />
+      {showFocusBtns && (
+        <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 10, display: 'flex', gap: 16, pointerEvents: 'auto' }}>
+          <button onClick={focusMain} style={{ padding: '10px 24px', background: 'rgba(255,200,100,0.18)', border: '1px solid rgba(255,200,100,0.4)', borderRadius: 24, color: '#ffe0b0', fontSize: 14, cursor: 'pointer', backdropFilter: 'blur(8px)', fontFamily: 'inherit', letterSpacing: 1, transition: 'all 0.3s' }}>✦ 金色星系</button>
+          <button onClick={focusVideo} style={{ padding: '10px 24px', background: 'rgba(140,210,255,0.18)', border: '1px solid rgba(140,210,255,0.4)', borderRadius: 24, color: '#b0dfff', fontSize: 14, cursor: 'pointer', backdropFilter: 'blur(8px)', fontFamily: 'inherit', letterSpacing: 1, transition: 'all 0.3s' }}>❄ 冰蓝星系</button>
+        </div>
+      )}
+    </>
+  );
 }
