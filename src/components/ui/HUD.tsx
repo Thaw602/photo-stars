@@ -30,6 +30,7 @@ export default function HUD() {
             <span className="hud-search-icon">#</span>
             <input className="hud-search-input" type="text" inputMode="numeric" placeholder="搜索编号..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { clearHighlight(); (e.target as HTMLInputElement).blur(); } }} />
             {searchQuery && <button className="hud-search-clear" onClick={() => clearHighlight()}>✕</button>}
+            <span className="hud-search-hint">📷 #1~{manifest.photoCount} · 🎬 #{manifest.photoCount + 1}~{manifest.total}</span>
           </div>
           {selectedFile && (
             <div className="hud-selected">
