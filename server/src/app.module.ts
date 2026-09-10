@@ -8,6 +8,7 @@ import { PhotosModule } from './photos/photos.module';
 import { UploadModule } from './upload/upload.module';
 import { CaptionsModule } from './captions/captions.module';
 import { SharesModule } from './shares/shares.module';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { SharesModule } from './shares/shares.module';
     UploadModule,
     CaptionsModule,
     SharesModule,
+    StatsModule,
   ],
   controllers: [HealthController],
 })
