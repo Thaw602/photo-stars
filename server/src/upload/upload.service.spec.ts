@@ -1,7 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import { Repository } from 'typeorm';
+import * as path from 'node:path';
 import { UploadService } from './upload.service';
+import { ThumbnailService } from './thumbnail.service';
 import { Photo } from '../entities/photo.entity';
+
+const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
 
 jest.mock('node:fs/promises', () => ({
   mkdir: jest.fn(async () => undefined),
@@ -35,13 +39,20 @@ function makeFile(buffer: Buffer, originalname: string, size?: number): Express.
 describe('UploadService', () => {
   let service: UploadService;
   let photosRepoMock: { create: jest.Mock; save: jest.Mock };
+  let thumbnailMock: { generate: jest.Mock };
 
   beforeEach(() => {
     photosRepoMock = {
       create: jest.fn((data: any) => data),
       save: jest.fn(async (data: any) => data),
     };
-    service = new UploadService(photosRepoMock as unknown as Repository<Photo>);
+    thumbnailMock = {
+      generate: jest.fn(async (absPath: string) => absPath.replace(/\.\w+$/, '.thumb.jpg')),
+    };
+    service = new UploadService(
+      photosRepoMock as unknown as Repository<Photo>,
+      thumbnailMock as unknown as ThumbnailService,
+    );
     mockFileTypeFromBuffer.mockReset();
   });
 
@@ -61,7 +72,12 @@ describe('UploadService', () => {
     expect(created.is_builtin).toBe(false);
     expect(created.file_size).toBe(PNG_1x1.length);
     expect(created.file_path).toMatch(/^\d{4}-\d{2}[\\/][0-9a-f-]+\.png$/);
+    expect(created.thumbnail_path).toMatch(/\.thumb\.jpg$/);
     expect(created.taken_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(thumbnailMock.generate).toHaveBeenCalledWith(
+      expect.stringMatching(/[\\/]\d{4}-\d{2}[\\/][0-9a-f-]+\.png$/),
+      'photo',
+    );
   });
 
   it('treats mp4 as video media_type', async () => {
@@ -73,6 +89,11 @@ describe('UploadService', () => {
     const [created] = photosRepoMock.save.mock.calls[0];
     expect(created.media_type).toBe('video');
     expect(created.file_path).toMatch(/\.mp4$/);
+    expect(created.thumbnail_path).toMatch(/\.thumb\.jpg$/);
+    expect(thumbnailMock.generate).toHaveBeenCalledWith(
+      expect.stringMatching(/[\\/]\d{4}-\d{2}[\\/][0-9a-f-]+\.mp4$/),
+      'video',
+    );
   });
 
   it('rejects images larger than 20MB (400 file too large)', async () => {

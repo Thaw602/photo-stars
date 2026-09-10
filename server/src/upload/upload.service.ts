@@ -6,12 +6,16 @@ import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { loadFileType } from './file-type.loader';
+import { ThumbnailService } from './thumbnail.service';
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
 
 @Injectable()
 export class UploadService {
-  constructor(@InjectRepository(Photo) private photos: Repository<Photo>) {}
+  constructor(
+    @InjectRepository(Photo) private photos: Repository<Photo>,
+    private readonly thumbnails: ThumbnailService,
+  ) {}
 
   async upload(file: Express.Multer.File, user: { id: number }): Promise<Photo> {
     const { fileTypeFromBuffer } = await loadFileType();
@@ -23,14 +27,24 @@ export class UploadService {
     const limit = isVideo ? 100 * 1024 * 1024 : 20 * 1024 * 1024;
     if (file.size > limit) throw new BadRequestException('file too large');
     const name = randomUUID() + '.' + ext;
-    const dir = path.join(UPLOAD_ROOT, new Date().toISOString().slice(0, 7));
+    const month = new Date().toISOString().slice(0, 7);
+    const dir = path.join(UPLOAD_ROOT, month);
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(path.join(dir, name), file.buffer);
+
+    // generate() takes/returns an ABSOLUTE path, but thumbnail_path is stored
+    // relative to UPLOAD_ROOT (consistent with file_path, stored relative below).
+    const thumbAbs = await this.thumbnails.generate(
+      path.join(dir, name),
+      isVideo ? 'video' : 'photo',
+    );
+
     return this.photos.save(
       this.photos.create({
         user_id: user.id,
         media_type: isVideo ? 'video' : 'photo',
-        file_path: path.join(new Date().toISOString().slice(0, 7), name),
+        file_path: path.join(month, name),
+        thumbnail_path: path.relative(UPLOAD_ROOT, thumbAbs),
         file_size: file.size,
         taken_date: new Date().toISOString().slice(0, 10),
         is_builtin: false,
