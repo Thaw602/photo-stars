@@ -5,6 +5,7 @@ import { Photo } from '../entities/photo.entity';
 import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { loadFileType } from './file-type.loader';
 
 const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
 
@@ -13,7 +14,7 @@ export class UploadService {
   constructor(@InjectRepository(Photo) private photos: Repository<Photo>) {}
 
   async upload(file: Express.Multer.File, user: { id: number }): Promise<Photo> {
-    const { fileTypeFromBuffer } = await import('file-type');
+    const { fileTypeFromBuffer } = await loadFileType();
     const type = await fileTypeFromBuffer(file.buffer);
     const ext = type?.ext ?? path.extname(file.originalname).slice(1);
     const allowed = ['jpg', 'jpeg', 'png', 'webp', 'mp4'];

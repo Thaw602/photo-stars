@@ -3,18 +3,17 @@ import { Repository } from 'typeorm';
 import { UploadService } from './upload.service';
 import { Photo } from '../entities/photo.entity';
 
-// R11: file-type v19 is ESM-only and cannot be resolved by jest-resolve under
-// CommonJS. Mock it here and drive `fileTypeFromBuffer` per-test; the real
-// library's magic-byte behaviour is exercised separately at runtime (native
-// `import()`), which is the path this test cannot reach.
-const mockFileTypeFromBuffer = jest.fn();
-jest.mock('file-type', () => ({ fileTypeFromBuffer: mockFileTypeFromBuffer }), {
-  virtual: true,
-});
-
 jest.mock('node:fs/promises', () => ({
   mkdir: jest.fn(async () => undefined),
   writeFile: jest.fn(async () => undefined),
+}));
+
+// file-type is ESM-only and loaded via a native dynamic import (see
+// file-type.loader.ts). Drive the loader with a per-test stub so the service's
+// branching (allowed types / size limits / forged magic bytes) is deterministic.
+const mockFileTypeFromBuffer = jest.fn();
+jest.mock('./file-type.loader', () => ({
+  loadFileType: jest.fn(async () => ({ fileTypeFromBuffer: mockFileTypeFromBuffer })),
 }));
 
 const PNG_1x1 = Buffer.from(
@@ -105,8 +104,8 @@ describe('UploadService', () => {
 
   it('rejects a real but unsupported type (gif)', async () => {
     mockFileTypeFromBuffer.mockResolvedValue({ ext: 'gif', mime: 'image/gif' });
-
-    await expect(service.upload(makeFile(Buffer.from('GIF89a'), 'anim.gif'), { id: 42 })).rejects.toThrow(
+    const gif = Buffer.concat([Buffer.from('GIF89a'), Buffer.alloc(10)]);
+    await expect(service.upload(makeFile(gif, 'anim.gif'), { id: 42 })).rejects.toThrow(
       BadRequestException,
     );
     expect(photosRepoMock.save).not.toHaveBeenCalled();
