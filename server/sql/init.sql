@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS photos (
   PRIMARY KEY (id),
   KEY idx_photos_user_id (user_id),
   KEY idx_photos_media_type (media_type),
-  KEY idx_photos_taken_date (taken_date)
+  KEY idx_photos_taken_date (taken_date),
+  KEY idx_photos_builtin_active (is_builtin, deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. captions 照片文案表（一张照片最多一条文案）

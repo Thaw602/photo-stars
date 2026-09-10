@@ -43,8 +43,8 @@ export class UploadService {
       this.photos.create({
         user_id: user.id,
         media_type: isVideo ? 'video' : 'photo',
-        file_path: path.join(month, name),
-        thumbnail_path: path.relative(UPLOAD_ROOT, thumbAbs),
+        file_path: path.posix.join(month, name),
+        thumbnail_path: path.relative(UPLOAD_ROOT, thumbAbs).replace(/\\/g, '/'),
         file_size: file.size,
         taken_date: new Date().toISOString().slice(0, 10),
         is_builtin: false,
