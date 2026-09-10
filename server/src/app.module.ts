@@ -9,6 +9,7 @@ import { UploadModule } from './upload/upload.module';
 import { CaptionsModule } from './captions/captions.module';
 import { SharesModule } from './shares/shares.module';
 import { StatsModule } from './stats/stats.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { StatsModule } from './stats/stats.module';
     CaptionsModule,
     SharesModule,
     StatsModule,
+    TasksModule,
   ],
   controllers: [HealthController],
 })
